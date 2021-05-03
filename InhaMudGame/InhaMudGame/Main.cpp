@@ -1,15 +1,17 @@
-#include<iostream>
+ï»¿#include<iostream>
 #include<time.h>
 #include<conio.h>
 #include<string.h>
 #include "Screen.h"
-#define MAP_COL 70
+#define MAP_COL 120
 #define MAP_ROW 30
-#define BULLET_MOVE_TIME 80
+#define BULLET_MOVE_TIME 10
 #define BULLET_MAX 100
-
+int WallLife = 1000;
+int Round = 1;
+int RoundTime = 60;
 typedef enum _DIRECT { UP, DOWN,LEFT,RIGHT } DIRECT;
-const char *pState[4] = { "À§ÂÊ", "¾Æ·¡ÂÊ", "¿ÞÂÊ", "¿À¸¥ÂÊ" };
+const char *pState[4] = { "ìœ„ìª½", "ì•„ëž˜ìª½", "ì™¼ìª½", "ì˜¤ë¥¸ìª½" };
 typedef struct _Player
 {
 	int x, y;
@@ -26,19 +28,136 @@ typedef struct _Bullet
 	int MoveTime;
 }BULLET;
 
+typedef struct _ENEMY
+{
+	int x;
+	int y;
+	int Life;
+	int Direct;
+	int MoveTime;
+	int ApperTime;
+	int OldTime;
+}ENEMY;
+
+typedef struct _BOMBENEMY
+{
+	int x;
+	int y;
+	int Life;
+	int MoveTime;
+	int AppearTime;
+	int OldTime;
+} BOMB_ENEMY;
+
 Player player;
 BULLET PlayerBullet[BULLET_MAX];
+int EnemyIndex = 0;
+int BombEnemyIndex = 0;
+unsigned int StartTime;
+ENEMY Enemy[30];
+BOMB_ENEMY Bomb_Enemy[15];
 
 void Init()
 {
-	player.x = 5;
+	player.x = 1;
 	player.y = 10;
+
+	for (int i = 0; i < 30; ++i)
+	{
+		Enemy[i].ApperTime = 3600 * (i + 1);
+		Enemy[i].Direct = LEFT;
+		Enemy[i].MoveTime = 600;
+		Enemy[i].x = MAP_COL - 3;
+		Enemy[i].y = (rand() + 1) % 19 + 6;
+		Enemy[i].Life = 1;
+	}
+	for (int i = 0; i < 15; ++i)
+	{
+		Bomb_Enemy[i].AppearTime = 4600 * (i + 1);
+		Bomb_Enemy[i].MoveTime = 200;
+		Bomb_Enemy[i].x = MAP_COL - 5;
+		Bomb_Enemy[i].y = (rand()+1) % 19 + 6;
+		Bomb_Enemy[i].Life = 1;
+	}
+}
+
+void GamePhase()
+{
+
+}
+void RepairPhase()
+{
+
+}
+void EnemySpawn(int passtime)
+{
+	for (int i = EnemyIndex; i < 30; ++i)
+	{
+		if (Enemy[i].ApperTime <= passtime)
+		{
+			EnemyIndex++;
+		}
+		else
+		{
+			break;
+		}
+	}
+	for (int i = BombEnemyIndex; i < 15; ++i)
+	{
+		if (Bomb_Enemy[i].AppearTime <= passtime)
+		{
+			BombEnemyIndex++;
+		}
+		else
+		{
+			break;
+		}
+	}
+}
+
+
+
+void EnemyMove(int curtime)
+{
+	for (int i = 0; i < EnemyIndex; ++i)
+	{
+		if (Enemy[i].Life == 1)
+		{
+			if (curtime - Enemy[i].OldTime > Enemy[i].MoveTime && Enemy[i].x>6)
+			{
+				Enemy[i].x--;
+				Enemy[i].OldTime = curtime;
+			}
+		}
+	}
+	for (int i = 0; i < BombEnemyIndex; ++i)
+	{
+		if (Bomb_Enemy[i].Life == 1)
+		{
+			if (curtime - Bomb_Enemy[i].OldTime > Bomb_Enemy[i].MoveTime && Bomb_Enemy[i].x>6)
+			{
+				Bomb_Enemy[i].x--;
+				Bomb_Enemy[i].OldTime = curtime;
+			}
+			else if(Bomb_Enemy[i].x==6)
+			{
+				Bomb_Enemy[i].Life = 0;
+			}
+		}
+	}
+
 }
 void Update()
 {
-	int i;
-	clock_t curtime = clock();
-	for (i = 0; i < BULLET_MAX; ++i)
+	int curtime = clock();
+	int passtime=curtime-StartTime;
+	int temp;
+	
+
+	EnemySpawn(passtime);
+	EnemyMove(curtime);
+
+	for (int i = 0; i < BULLET_MAX; ++i)
 	{
 		if (PlayerBullet[i].Life == 1)
 		{
@@ -55,7 +174,7 @@ void Update()
 				}
 				PlayerBullet[i].MoveTime = curtime;
 			}
-			if (PlayerBullet[i].x<0 || PlayerBullet[i].x>MAP_COL - 1 ||
+			if (PlayerBullet[i].x<0 || PlayerBullet[i].x*2>MAP_COL - 1 ||
 				PlayerBullet[i].y > MAP_ROW - 1 || PlayerBullet[i].y < 0)
 			{
 				PlayerBullet[i].Life = 0;
@@ -66,25 +185,61 @@ void Update()
 void Render()
 {
 	char str[100];
+	char Time[100];
 	ScreenClear();
-
-	ScreenPrint(player.x * 2, player.y, "¡ß");
-	
+	int curtime = clock();
+	sprintf_s(Time, "TIME : %.0lf", (double)60-(curtime*0.001));
+	ScreenPrint(50, 3, Time);
+	ScreenPrint(player.x, player.y - 1, " o");
+	ScreenPrint(player.x , player.y, "()â”");
+	ScreenPrint(player.x, player.y + 1, "|_");
+	for (int i = 0; i < MAP_COL; ++i)
+	{
+		ScreenPrint(i, 5, "=");
+	}
+	for (int i = 0; i < MAP_COL; ++i)
+	{
+		ScreenPrint(i, 25, "=");
+	}
 	for (int i = 0; i < BULLET_MAX; ++i)
 	{
 		if (PlayerBullet[i].Life == 1)
 		{
-			ScreenPrint(PlayerBullet[i].x * 2, PlayerBullet[i].y, "-");
+			ScreenPrint(PlayerBullet[i].x*2, PlayerBullet[i].y, "-");
 		}
 	}
-	sprintf_s(str, "%s »óÅÂ %d %d", pState[player.direct], player.x, player.y);
+	for (int i = 0; i < EnemyIndex; ++i)
+	{
+		ScreenPrint(Enemy[i].x, Enemy[i].y, "â”” 0â”");
+		ScreenPrint(Enemy[i].x, Enemy[i].y + 1,"â”Œ ã„´");
+	}
+
+	for (int i = 0; i < BombEnemyIndex; ++i)
+	{
+		if (Bomb_Enemy[i].Life == 1)
+		{
+			ScreenPrint(Bomb_Enemy[i].x, Bomb_Enemy[i].y, "ï¼¼B/ ");
+			ScreenPrint(Bomb_Enemy[i].x, Bomb_Enemy[i].y+1," â”Œ ã„´=3");
+		}
+	}
+	for (int i = 6; i < 25; ++i)
+	{
+		ScreenPrint(4, i, "||");
+	}
+	sprintf_s(str, "%s ìƒíƒœ %d %d", pState[player.direct], player.x, player.y);
 	ScreenPrint(10, 20, str);
 	ScreenFlipping();
 
 }
 
+void Release()
+{
+
+}
+
 int main(void)
 {
+	srand(unsigned int(time(NULL)));
 	int key;
 	clock_t curtime;
 
@@ -101,12 +256,18 @@ int main(void)
 			switch (key)
 			{
 			case 72:
-				player.direct = UP;
-				player.y--;
+				if (player.y > 6)
+				{
+					player.direct = UP;
+					player.y--;
+				}
 				break;
 			case 80:
-				player.direct = DOWN;
-				player.y++;
+				if (player.y < 24)
+				{
+					player.direct = DOWN;
+					player.y++;
+				}
 				break;
 			case 32:
 				if (curtime - player.OldFireTime >= player.FireTime)
@@ -137,7 +298,7 @@ int main(void)
 		Update();
 		Render();
 	}
-	//Release();
+	Release();
 	ScreenRelease();
 	return 0;
 }

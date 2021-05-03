@@ -1,2 +1,3 @@
 ﻿  Main.cpp
+d:\mud\crash.log\inhamudgame\inhamudgame\main.cpp(154): warning C4101: 'temp' :참조되지 않은 지역 변수입니다.
   InhaMudGame.vcxproj -> D:\mud\Crash.log\InhaMudGame\Debug\InhaMudGame.exe
