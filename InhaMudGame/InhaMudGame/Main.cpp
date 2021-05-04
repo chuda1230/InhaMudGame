@@ -5,13 +5,15 @@
 #include "Screen.h"
 #define MAP_COL 120
 #define MAP_ROW 30
-#define BULLET_MOVE_TIME 10
-#define BULLET_MAX 100
+#define BULLET_MOVE_TIME 0.1
 int WallLife = 1000;
 int Round = 1;
-int RoundTime = 60;
+double RoundTime = 0;
 typedef enum _DIRECT { UP, DOWN,LEFT,RIGHT } DIRECT;
+typedef enum _STATE {RUN,HIT,DEAD } STATE;
 const char *pState[4] = { "위쪽", "아래쪽", "왼쪽", "오른쪽" };
+typedef enum _PHASE {GAME,REPAIR,END} PHASE;
+PHASE phase;
 typedef struct _Player
 {
 	int x, y;
@@ -19,6 +21,7 @@ typedef struct _Player
 	int OldFireTime;
 	DIRECT direct;
 } Player;
+Player player;
 
 typedef struct _Bullet
 {
@@ -27,6 +30,31 @@ typedef struct _Bullet
 	DIRECT Direct;
 	int MoveTime;
 }BULLET;
+BULLET *PlayerBullet;
+int Bulletarrsize = 1;
+int BulletSize = 0;
+int lastofBullet = -1;
+void Bullet_Full()
+{
+	PlayerBullet = (BULLET*)realloc(PlayerBullet, 2 * (Bulletarrsize) * sizeof(BULLET));
+	Bulletarrsize *= 2;
+}
+void Bullet_push_back(BULLET item)
+{
+	if (lastofBullet >= Bulletarrsize - 1)
+		Bullet_Full();
+	PlayerBullet[++lastofBullet] = item;
+	++BulletSize;
+}
+void Bullet_Delete(int index)
+{
+	for (int i = index; i < BulletSize; ++i)
+	{
+		PlayerBullet[i] = PlayerBullet[i + 1];	
+	}
+	--BulletSize;
+	--lastofBullet;
+}
 
 typedef struct _ENEMY
 {
@@ -37,7 +65,34 @@ typedef struct _ENEMY
 	int MoveTime;
 	int ApperTime;
 	int OldTime;
+	STATE State;
 }ENEMY;
+ENEMY *Enemy_list;
+int EnemyIndex = 0;
+int Enemyarrsize = 1;
+int lastofEnemy = -1;
+clock_t EnemySpawnTime;
+void Enemy_Full()
+{
+	Enemy_list = (ENEMY*)realloc(Enemy_list, 2 * (Enemyarrsize) * sizeof(ENEMY));
+	Enemyarrsize *= 2;
+}
+void Enemy_push_back(ENEMY item)
+{
+	if (lastofEnemy >= Enemyarrsize - 1)
+		Enemy_Full();
+	Enemy_list[++lastofEnemy] = item;
+	++EnemyIndex;
+}
+void Enemy_Delete(int index)
+{
+	for (int i = index; i < EnemyIndex; ++i)
+	{
+		Enemy_list[i] = Enemy_list[i + 1];
+	}
+	--EnemyIndex;
+	--lastofEnemy;
+}
 
 typedef struct _BOMBENEMY
 {
@@ -47,119 +102,213 @@ typedef struct _BOMBENEMY
 	int MoveTime;
 	int AppearTime;
 	int OldTime;
+	STATE State;
 } BOMB_ENEMY;
 
-Player player;
-BULLET PlayerBullet[BULLET_MAX];
-int EnemyIndex = 0;
+BOMB_ENEMY *BombEnemy_list;
 int BombEnemyIndex = 0;
-unsigned int StartTime;
-ENEMY Enemy[30];
-BOMB_ENEMY Bomb_Enemy[15];
+int BombEnemyarrsize = 1;
+int lastofBombEnemy = -1;
+clock_t BombEnemySpawnTime;
+void BombEnemy_Full()
+{
+	BombEnemy_list = (BOMB_ENEMY*)realloc(BombEnemy_list, 2 * (BombEnemyarrsize) * sizeof(BOMB_ENEMY));
+	BombEnemyarrsize *= 2;
+}
+void BombEnemy_push_back(BOMB_ENEMY item)
+{
+	if (lastofBombEnemy >= BombEnemyarrsize - 1)
+		BombEnemy_Full();
+	BombEnemy_list[++lastofBombEnemy] = item;
+	++BombEnemyIndex;
+}
+void BombEnemy_Delete(int index)
+{
+	for (int i = index; i < BombEnemyIndex; ++i)
+	{
+		BombEnemy_list[i] = BombEnemy_list[i + 1];
+	}
+	--BombEnemyIndex;
+	--lastofBombEnemy;
+}
 
+
+unsigned int StartTime;
+int Score;
 void Init()
 {
 	player.x = 1;
 	player.y = 10;
-
-	for (int i = 0; i < 30; ++i)
-	{
-		Enemy[i].ApperTime = 3600 * (i + 1);
-		Enemy[i].Direct = LEFT;
-		Enemy[i].MoveTime = 600;
-		Enemy[i].x = MAP_COL - 3;
-		Enemy[i].y = (rand() + 1) % 19 + 6;
-		Enemy[i].Life = 1;
-	}
-	for (int i = 0; i < 15; ++i)
-	{
-		Bomb_Enemy[i].AppearTime = 4600 * (i + 1);
-		Bomb_Enemy[i].MoveTime = 200;
-		Bomb_Enemy[i].x = MAP_COL - 5;
-		Bomb_Enemy[i].y = (rand()+1) % 19 + 6;
-		Bomb_Enemy[i].Life = 1;
-	}
 }
 
-void GamePhase()
+void PlayerMove()
 {
+	int key;
+	clock_t curtime;
+	if (_kbhit())
+	{
+		key = _getch();
+		curtime = clock();
 
+		switch (key)
+		{
+		case 72:
+			if (player.y > 6)
+			{
+				player.direct = UP;
+				player.y--;
+			}
+			break;
+		case 80:
+			if (player.y < 24)
+			{
+				player.direct = DOWN;
+				player.y++;
+			}
+			break;
+		case 32:
+			if (curtime - player.OldFireTime >= player.FireTime)
+			{
+				BULLET temp;
+				temp.Direct = RIGHT;
+				temp.x = player.x;
+				temp.y = player.y;
+				temp.Life = 1;
+				player.OldFireTime = temp.MoveTime = curtime;
+				Bullet_push_back(temp);
+			}
+			break;
+		}
+	}
 }
-void RepairPhase()
-{
 
-}
 void EnemySpawn(int passtime)
 {
-	for (int i = EnemyIndex; i < 30; ++i)
+	if (EnemySpawnTime + 3600 <= passtime)
 	{
-		if (Enemy[i].ApperTime <= passtime)
-		{
-			EnemyIndex++;
-		}
-		else
-		{
-			break;
-		}
+		ENEMY temp;
+		temp.ApperTime = passtime;
+		temp.Direct = LEFT;
+		temp.MoveTime = 600;
+		temp.x = MAP_COL - 3;
+		temp.y = (rand()) % 19 + 5;
+		temp.Life = 3;
+		temp.State = RUN;
+		Enemy_push_back(temp);
+		EnemySpawnTime = passtime;
 	}
-	for (int i = BombEnemyIndex; i < 15; ++i)
+
+	
+	if (BombEnemySpawnTime + 7200 <= passtime)
 	{
-		if (Bomb_Enemy[i].AppearTime <= passtime)
-		{
-			BombEnemyIndex++;
-		}
-		else
-		{
-			break;
-		}
+		BOMB_ENEMY temp;
+		temp.AppearTime = passtime;
+		temp.MoveTime = 20;
+		temp.x = MAP_COL - 5;
+		temp.y = (rand()) % 19 + 5;
+		temp.Life = 5;
+		temp.State = RUN;
+		BombEnemy_push_back(temp);
+		BombEnemySpawnTime = passtime;
 	}
 }
-
-
 
 void EnemyMove(int curtime)
 {
 	for (int i = 0; i < EnemyIndex; ++i)
 	{
-		if (Enemy[i].Life == 1)
+		if (Enemy_list[i].Life >= 1)
 		{
-			if (curtime - Enemy[i].OldTime > Enemy[i].MoveTime && Enemy[i].x>6)
+			if (curtime - Enemy_list[i].OldTime > Enemy_list[i].MoveTime && Enemy_list[i].x>6)
 			{
-				Enemy[i].x--;
-				Enemy[i].OldTime = curtime;
+				Enemy_list[i].x--;
+				Enemy_list[i].OldTime = curtime;
+			}
+			else if(Enemy_list[i].x==6)
+			{
+				WallLife -= 10;
 			}
 		}
 	}
 	for (int i = 0; i < BombEnemyIndex; ++i)
 	{
-		if (Bomb_Enemy[i].Life == 1)
+		if (BombEnemy_list[i].State == RUN)
 		{
-			if (curtime - Bomb_Enemy[i].OldTime > Bomb_Enemy[i].MoveTime && Bomb_Enemy[i].x>6)
+			if (curtime - BombEnemy_list[i].OldTime > BombEnemy_list[i].MoveTime && BombEnemy_list[i].x>6)
 			{
-				Bomb_Enemy[i].x--;
-				Bomb_Enemy[i].OldTime = curtime;
+				BombEnemy_list[i].x--;
+				BombEnemy_list[i].OldTime = curtime;
 			}
-			else if(Bomb_Enemy[i].x==6)
+			else if(BombEnemy_list[i].x==6)
 			{
-				Bomb_Enemy[i].Life = 0;
+				BombEnemy_list[i].Life = 0;
+				BombEnemy_list[i].State = DEAD;
+				WallLife -= 100;
 			}
 		}
 	}
-
 }
+
+void EnemyCollision()
+{
+	for (int i = 0; i < EnemyIndex; ++i)
+	{
+		if (Enemy_list[i].Life < 1) continue;
+		for (int j = 0; j < BulletSize; ++j)
+		{
+			if (PlayerBullet[j].Life == 1)
+			{
+				if ((Enemy_list[i].x == PlayerBullet[j].x*2 || Enemy_list[i].x+1 == PlayerBullet[j].x*2 || Enemy_list[i].x+2 == PlayerBullet[j].x*2) &&
+					(Enemy_list[i].y == PlayerBullet[j].y || Enemy_list[i].y + 1 == PlayerBullet[j].y))
+				{
+					Enemy_list[i].Life--;
+					Enemy_list[i].x++;
+					Enemy_list[i].State = HIT;
+					if (Enemy_list[i].Life < 1)
+					{
+						Enemy_list[i].Life = 0;
+						PlayerBullet[j].Life = 0;
+						Enemy_list[i].State = DEAD;
+					}
+					Bullet_Delete(j);
+					break;
+				}
+			}
+		}
+	}
+	for (int i = 0; i < BombEnemyIndex; ++i)
+	{
+		if (BombEnemy_list[i].State != RUN) continue;
+		for (int j = 0; j < BulletSize; ++j)
+		{
+			if (PlayerBullet[j].Life == 1)
+			{
+				if ((BombEnemy_list[i].x == PlayerBullet[j].x * 2 || BombEnemy_list[i].x+1 == PlayerBullet[j].x * 2 || BombEnemy_list[i].x+2 == PlayerBullet[j].x * 2) &&
+					(BombEnemy_list[i].y == PlayerBullet[j].y || BombEnemy_list[i].y+1 == PlayerBullet[j].y))
+				{
+					BombEnemy_list[i].Life = 0;
+					PlayerBullet[j].Life = 0;
+					BombEnemy_list[i].State = DEAD;
+					Bullet_Delete(j);
+					break;
+				}
+			}
+		}
+	}
+}
+
 void Update()
 {
 	int curtime = clock();
 	int passtime=curtime-StartTime;
 	int temp;
-	
 
 	EnemySpawn(passtime);
 	EnemyMove(curtime);
 
-	for (int i = 0; i < BULLET_MAX; ++i)
+	for (int i = 0; i < BulletSize; ++i)
 	{
-		if (PlayerBullet[i].Life == 1)
+		if (PlayerBullet[i].Life >= 1)
 		{
 			if (curtime - PlayerBullet[i].MoveTime >= BULLET_MOVE_TIME)
 			{
@@ -178,17 +327,27 @@ void Update()
 				PlayerBullet[i].y > MAP_ROW - 1 || PlayerBullet[i].y < 0)
 			{
 				PlayerBullet[i].Life = 0;
+				Bullet_Delete(i);
 			}
 		}
 	}
 }
+
 void Render()
 {
 	char str[100];
-	char Time[100];
+	char Time[20];
+	char strLife[20];
+	char strEnemy[10];
+	char strBombEnemy[10];
+	char strScore[50];
 	ScreenClear();
 	int curtime = clock();
-	sprintf_s(Time, "TIME : %.0lf", (double)60-(curtime*0.001));
+	sprintf_s(strScore, "SCORE : %d", Score);
+	sprintf_s(strLife, "LIFE : %d", WallLife);
+	sprintf_s(Time, "TIME : %.0lf", RoundTime);
+	ScreenPrint(50, 1, strScore);
+	ScreenPrint(10, 3, strLife);
 	ScreenPrint(50, 3, Time);
 	ScreenPrint(player.x, player.y - 1, " o");
 	ScreenPrint(player.x , player.y, "()┏");
@@ -201,7 +360,7 @@ void Render()
 	{
 		ScreenPrint(i, 25, "=");
 	}
-	for (int i = 0; i < BULLET_MAX; ++i)
+	for (int i = 0; i < BulletSize; ++i)
 	{
 		if (PlayerBullet[i].Life == 1)
 		{
@@ -210,16 +369,31 @@ void Render()
 	}
 	for (int i = 0; i < EnemyIndex; ++i)
 	{
-		ScreenPrint(Enemy[i].x, Enemy[i].y, "└ 0┐");
-		ScreenPrint(Enemy[i].x, Enemy[i].y + 1,"┌ ㄴ");
+		if (Enemy_list[i].State == RUN)
+		{
+			sprintf_s(strEnemy, "└ 0┐ %d", Enemy_list[i].Life);
+			ScreenPrint(Enemy_list[i].x, Enemy_list[i].y, strEnemy);
+			ScreenPrint(Enemy_list[i].x, Enemy_list[i].y + 1, "┌ ㄴ");
+		}
+		else if(Enemy_list[i].State == HIT)
+		{
+			sprintf_s(strEnemy, "!└ 0┘ %d", Enemy_list[i].Life);
+			ScreenPrint(Enemy_list[i].x, Enemy_list[i].y, strEnemy);
+			ScreenPrint(Enemy_list[i].x, Enemy_list[i].y + 1, "┌ ㄴ");
+		}
 	}
 
 	for (int i = 0; i < BombEnemyIndex; ++i)
 	{
-		if (Bomb_Enemy[i].Life == 1)
+		if (BombEnemy_list[i].State == RUN)
 		{
-			ScreenPrint(Bomb_Enemy[i].x, Bomb_Enemy[i].y, "＼B/ ");
-			ScreenPrint(Bomb_Enemy[i].x, Bomb_Enemy[i].y+1," ┌ ㄴ=3");
+			ScreenPrint(BombEnemy_list[i].x, BombEnemy_list[i].y, "＼B/ ");
+			ScreenPrint(BombEnemy_list[i].x, BombEnemy_list[i].y+1," ┌ ㄴ=3");
+		}
+		else if(BombEnemy_list[i].State == DEAD)
+		{
+			ScreenPrint(BombEnemy_list[i].x, BombEnemy_list[i].y, "★★");
+			ScreenPrint(BombEnemy_list[i].x, BombEnemy_list[i].y + 1, "★★");
 		}
 	}
 	for (int i = 6; i < 25; ++i)
@@ -229,10 +403,59 @@ void Render()
 	sprintf_s(str, "%s 상태 %d %d", pState[player.direct], player.x, player.y);
 	ScreenPrint(10, 20, str);
 	ScreenFlipping();
+}
 
+void DeadErase()
+{
+	for (int i = 0; i < EnemyIndex; ++i)
+	{
+		if (Enemy_list[i].State == DEAD)
+		{
+			Enemy_Delete(i);
+			Score += 10;
+		}
+		else if (Enemy_list[i].State == HIT)
+			Enemy_list[i].State = RUN;
+	}
+	for (int i = 0; i < BombEnemyIndex; ++i)
+	{
+		if (BombEnemy_list[i].State == DEAD)
+		{
+			BombEnemy_Delete(i);
+			Score += 20;
+		}
+	}
 }
 
 void Release()
+{
+	free(PlayerBullet);
+}
+void GamePhase()
+{
+	while (1)
+	{
+		int curtime = clock();
+		RoundTime = (double)60 - (curtime*0.001);
+		if (RoundTime < 0)
+		{
+			phase = REPAIR;
+			break;
+		}
+		PlayerMove();
+		EnemyCollision();
+		Update();
+		Render();
+		DeadErase();
+	}
+}
+
+void RepairPhase()
+{
+
+}
+
+void EndPhase()
 {
 
 }
@@ -240,64 +463,28 @@ void Release()
 int main(void)
 {
 	srand(unsigned int(time(NULL)));
-	int key;
-	clock_t curtime;
-
+	PlayerBullet = (BULLET*)malloc(sizeof(BULLET));
+	Enemy_list = (ENEMY*)malloc(sizeof(ENEMY));
+	BombEnemy_list = (BOMB_ENEMY*)malloc(sizeof(BOMB_ENEMY));
 	ScreenInit();
 	Init();
-	
+
 	while (1)
 	{
-		if (_kbhit())
+		if (phase == GAME)
 		{
-			key = _getch();
-			curtime = clock();
-
-			switch (key)
-			{
-			case 72:
-				if (player.y > 6)
-				{
-					player.direct = UP;
-					player.y--;
-				}
-				break;
-			case 80:
-				if (player.y < 24)
-				{
-					player.direct = DOWN;
-					player.y++;
-				}
-				break;
-			case 32:
-				if (curtime - player.OldFireTime >= player.FireTime)
-				{
-					for (int i = 0; i < BULLET_MAX; ++i)
-					{
-						if (PlayerBullet[i].Life == 0)
-						{
-							PlayerBullet[i].Life = 1;
-							PlayerBullet[i].Direct = RIGHT;
-							PlayerBullet[i].x = player.x;
-							PlayerBullet[i].y = player.y;
-
-							switch (PlayerBullet[i].Direct)
-							{
-							case RIGHT:
-								PlayerBullet[i].x += 1;
-								break;
-							}
-							player.OldFireTime = PlayerBullet[i].MoveTime = curtime;
-							break;
-						}
-					}
-				}
-				break;
-			}
+			GamePhase();
 		}
-		Update();
-		Render();
-	}
+		if (phase == REPAIR)
+		{
+			RepairPhase();
+		}
+		if (phase == END)
+		{
+			EndPhase();
+			break;
+		}
+ 	}
 	Release();
 	ScreenRelease();
 	return 0;
