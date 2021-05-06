@@ -1,17 +1,12 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
-#include<stdio.h>
-#include<time.h>
-#include<conio.h>
-#include<string.h>
-#include<stdlib.h>
+﻿#include "stdafx.h"
 #include "Screen.h"
 #include "Main.h"
 #define MAP_COL 120
 #define MAP_ROW 30
 #define BULLET_MOVE_TIME 0.1
-#define ROUND_TIME 60
-#define ENEMY_SPAWNTIME 7200
-#define BOMBENEMY_SPAWNTIME 10000
+#define ROUND_TIME 30
+#define ENEMY_SPAWNTIME 5000
+#define BOMBENEMY_SPAWNTIME 9000
 #define SHOOTENEMY_SPAWNTIME 18400
 
 void Bullet_Full()
@@ -130,8 +125,15 @@ void ShootEnemy_Delete(int index)
 
 void TurretInstall(int index)
 {
-	if(Turret_arr[index].Status!=1)
+	if (Turret_arr[index].Status != 1 && Score >= TurPrice)
+	{
+		Score -= TurPrice;
 		Turret_arr[index].Status = 1;
+	}
+	else
+	{
+		IsScoreLessUI = true;
+	}
 }
 
 void TurretShoot(int passtime)
@@ -171,7 +173,16 @@ void Upgrade(int index)
 	switch (index)
 	{
 	case 0:
-		player.GunPower++;
+		if (Score >= PGPrice)
+		{
+			player.GunPower++;
+			Score -= PGPrice;
+			PGPrice *= 1.5;
+		}
+		else
+		{
+			IsScoreLessUI = true;
+		}
 		break;
 	case 1:
 		UpgradeTurret(index,TurretUpgradeSelect);
@@ -230,6 +241,12 @@ void PlayerMove()
 				temp.Power = player.GunPower;
 				Bullet_push_back(temp);
 			}
+			break;
+		case 51:
+			Round++;
+			break;
+		case 52:
+			Score = 9999999;
 			break;
 		}
 	}
@@ -475,21 +492,24 @@ void RenderBasicUI()
 	char strLife[20];
 	char strScore[50];
 	char strRound[40];
+	char strGunPower[40];
 	sprintf_s(strScore, "SCORE : %d", Score);
 	sprintf_s(strLife, "LIFE : %d", WallLife);
 	sprintf_s(Time, "TIME : %.0lf", RoundTime);
 	sprintf_s(strRound, "ROUND : %d", Round);
+	sprintf_s(strGunPower, "GUN POWER : %d", player.GunPower);
 	ScreenPrint(50, 1, strScore);
 	ScreenPrint(10, 3, strLife);
 	ScreenPrint(50, 3, Time);
+	ScreenPrint(90, 1, strGunPower);
 	ScreenPrint(90, 3, strRound);
 }
 
 void RenderGameUI()
 {
-	char strEnemy[10];
-	char strBombEnemy[10];
-	char strShootEnemy[10];
+	char strEnemy[20];
+	char strBombEnemy[20];
+	char strShootEnemy[20];
 	ScreenPrint(player.x, player.y - 1, " o");
 	ScreenPrint(player.x, player.y, "()┏");
 	ScreenPrint(player.x, player.y + 1, "|_");
@@ -573,15 +593,15 @@ void UpgradeRenderUI()
 	char strUpgrade[100];
 	if (UpgradeSelect == 0)
 	{
-		sprintf_s(strUpgrade, "[1.플레이어 위력 : 100] 2.터렛 위력 3.터렛 발사 시간");
+		sprintf_s(strUpgrade, "[1.플레이어 위력 : %d] 2.터렛 위력 3.터렛 발사 시간",PGPrice);
 	}
 	if (UpgradeSelect == 1)
 	{
-		sprintf_s(strUpgrade, "1.플레이어 위력 [2.터렛 위력 : 200] 3.터렛 발사 시간");
+		sprintf_s(strUpgrade, "1.플레이어 위력 [2.터렛 위력 : %d] 3.터렛 발사 시간",TGPrice);
 	}
 	if (UpgradeSelect == 2)
 	{
-		sprintf_s(strUpgrade, "1.플레이어 위력 2.터렛 위력 [3.터렛 발사 시간 : 200]");
+		sprintf_s(strUpgrade, "1.플레이어 위력 2.터렛 위력 [3.터렛 발사 시간 : %d]",TSPirce);
 	}
 	ScreenPrint(20, 28, strUpgrade);
 }
@@ -617,6 +637,11 @@ void RenderRepairUI()
 	else if (IsTurretUpGradeUI)
 	{
 		TurretUpgradeUI();
+	}
+
+	if (IsScoreLessUI)
+	{
+		ScreenPrint(100, 28, "점수가 부족합니다");
 	}
 }
 
@@ -926,6 +951,7 @@ void RepairMenuMover()
 			TurretUI = false;
 			UpgradeUI = false;
 			IsTurretUpGradeUI = false;
+			IsScoreLessUI = false;
 			break;
 		}
 	}
