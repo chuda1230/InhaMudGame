@@ -26,5 +26,8 @@
     <ClInclude Include="Screen.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Main.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
