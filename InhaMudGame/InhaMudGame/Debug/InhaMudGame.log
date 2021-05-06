@@ -1,5 +1,2 @@
 ﻿  Main.cpp
-e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(347): warning C4101: 'temp': unreferenced local variable
-e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(400): warning C4101: 'strBombEnemy': unreferenced local variable
-e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(664): warning C4101: 'n': unreferenced local variable
   InhaMudGame.vcxproj -> E:\문서\GitHub\InhaMudGame\InhaMudGame\Debug\InhaMudGame.exe

@@ -22,17 +22,26 @@ typedef struct _Player
 	int FireTime;
 	int OldFireTime;
 	DIRECT direct;
+	int GunPower;
 } Player;
 Player player;
 int MenuSelect = 0;
 int TurretSelect = 0;
+int UpgradeSelect = 0;
+int TurretUpgradeSelect = 0;
+int FirstTurretSelect = 0;
+int FirstTurretUpgradeSelect = 0;
+
 typedef struct _Bullet
 {
 	int x,y;
 	int Life;
 	DIRECT Direct;
 	int MoveTime;
+	int Power;
+
 }BULLET;
+
 BULLET *PlayerBullet;
 int Bulletarrsize = 1;
 int BulletSize = 0;
@@ -135,6 +144,47 @@ void BombEnemy_Delete(int index)
 	--lastofBombEnemy;
 }
 
+typedef struct _SHOOTENEMY
+{
+	int x;
+	int y;
+	int Life;
+	int MoveTime;
+	int AppearTime;
+	int MoveOldTime;
+	int FireTime;
+	int OldFireTime;
+	STATE State;
+
+} SHOOT_ENEMY;
+SHOOT_ENEMY *ShootEnemy_list;
+int ShootEnemyIndex = 0;
+int ShootEnemyarrsize = 1;
+int lastofShootEnemy = -1;
+clock_t ShootEnemySpawnTime;
+void ShootEnemy_Full()
+{
+	ShootEnemy_list = (SHOOT_ENEMY*)realloc(ShootEnemy_list, 2 * (ShootEnemyarrsize) * sizeof(SHOOT_ENEMY));
+	ShootEnemyarrsize *= 2;
+}
+void BombEnemy_push_back(SHOOT_ENEMY item)
+{
+	if (lastofShootEnemy >= ShootEnemyarrsize - 1)
+		ShootEnemy_Full();
+	ShootEnemy_list[++lastofShootEnemy] = item;
+	++ShootEnemyIndex;
+}
+void ShootEnemy_Delete(int index)
+{
+	for (int i = index; i < ShootEnemyIndex; ++i)
+	{
+		ShootEnemy_list[i] = ShootEnemy_list[i + 1];
+	}
+	--ShootEnemyIndex;
+	--lastofShootEnemy;
+}
+
+
 typedef struct _TURRET
 {
 	int x;
@@ -142,6 +192,9 @@ typedef struct _TURRET
 	int FireTime;
 	int OldFireTime;
 	int Status;
+	int TurretPower;
+	int TurretSpeed;
+
 } TURRET;
 TURRET Turret_arr[10];
 
@@ -165,16 +218,45 @@ void TurretShoot(int passtime)
 			temp.y = Turret_arr[i].y;
 			temp.Life = 1;
 			Turret_arr[i].OldFireTime = temp.MoveTime = passtime;
+			temp.Power = Turret_arr[i].TurretPower;
 			Bullet_push_back(temp);
 		}
 	}
 }
 
-
 unsigned int StartTime;
 int Score;
 bool TurretUI;
 bool UpgradeUI;
+bool IsTurretUpGradeUI;
+
+void UpgradeTurret(int n,int index)
+{
+	IsTurretUpGradeUI = true;
+	if (n == 1)
+	{
+		Turret_arr[index].TurretPower += 1;
+	}
+	else if (n == 2)
+	{
+		Turret_arr[index].FireTime -= 500;
+	}
+}
+void Upgrade(int index)
+{
+	switch (index)
+	{
+	case 0:
+		player.GunPower++;
+		break;
+	case 1:
+		UpgradeTurret(index,TurretUpgradeSelect);
+		break;
+	case 2:
+		UpgradeTurret(index,TurretUpgradeSelect);
+		break;
+	}
+}
 void Init()
 {
 	player.x = 1;
@@ -182,6 +264,7 @@ void Init()
 	PlayerBullet = (BULLET*)malloc(sizeof(BULLET));
 	Enemy_list = (ENEMY*)malloc(sizeof(ENEMY));
 	BombEnemy_list = (BOMB_ENEMY*)malloc(sizeof(BOMB_ENEMY));
+	ShootEnemy_list = (SHOOT_ENEMY*)malloc(sizeof(SHOOT_ENEMY));
 }
 
 void PlayerMove()
@@ -218,6 +301,7 @@ void PlayerMove()
 				temp.y = player.y;
 				temp.Life = 1;
 				player.OldFireTime = temp.MoveTime = curtime;
+				temp.Power = player.GunPower;
 				Bullet_push_back(temp);
 			}
 			break;
@@ -235,7 +319,7 @@ void EnemySpawn(int passtime)
 		temp.MoveTime = 300;
 		temp.x = MAP_COL - 3;
 		temp.y = (rand()) % 19 + 5;
-		temp.Life = 3;
+		temp.Life = 3+(Round-1);
 		temp.State = RUN;
 		Enemy_push_back(temp);
 		EnemySpawnTime = passtime;
@@ -249,7 +333,7 @@ void EnemySpawn(int passtime)
 		temp.MoveTime = 20;
 		temp.x = MAP_COL - 5;
 		temp.y = (rand()) % 19 + 5;
-		temp.Life = 5;
+		temp.Life = 1+(Round-1);
 		temp.State = RUN;
 		BombEnemy_push_back(temp);
 		BombEnemySpawnTime = passtime;
@@ -304,13 +388,12 @@ void EnemyCollision()
 				if ((Enemy_list[i].x == PlayerBullet[j].x*2 || Enemy_list[i].x+1 == PlayerBullet[j].x*2 || Enemy_list[i].x+2 == PlayerBullet[j].x*2) &&
 					(Enemy_list[i].y == PlayerBullet[j].y || Enemy_list[i].y + 1 == PlayerBullet[j].y))
 				{
-					Enemy_list[i].Life--;
+					Enemy_list[i].Life -= PlayerBullet[j].Power;
 					Enemy_list[i].x++;
 					Enemy_list[i].State = HIT;
 					if (Enemy_list[i].Life < 1)
 					{
-						Enemy_list[i].Life = 0;
-						PlayerBullet[j].Life = 0;
+						//PlayerBullet[j].Life = 0;
 						Enemy_list[i].State = DEAD;
 					}
 					Bullet_Delete(j);
@@ -329,9 +412,13 @@ void EnemyCollision()
 				if ((BombEnemy_list[i].x == PlayerBullet[j].x * 2 || BombEnemy_list[i].x+1 == PlayerBullet[j].x * 2 || BombEnemy_list[i].x+2 == PlayerBullet[j].x * 2) &&
 					(BombEnemy_list[i].y == PlayerBullet[j].y || BombEnemy_list[i].y+1 == PlayerBullet[j].y))
 				{
-					BombEnemy_list[i].Life = 0;
-					PlayerBullet[j].Life = 0;
-					BombEnemy_list[i].State = DEAD;
+					BombEnemy_list[i].Life -= PlayerBullet[j].Power;
+					BombEnemy_list[i].x++;
+					if (BombEnemy_list[i].Life < 1)
+					{
+						//PlayerBullet[j].Life = 0;
+						BombEnemy_list[i].State = DEAD;
+					}
 					Bullet_Delete(j);
 					break;
 				}
@@ -344,7 +431,6 @@ void Update()
 {
 	int curtime = clock();
 	int passtime=curtime;
-	int temp;
 
 	EnemySpawn(passtime);
 	EnemyMove(curtime);
@@ -423,13 +509,18 @@ void RenderGameUI()
 			ScreenPrint(Enemy_list[i].x, Enemy_list[i].y, strEnemy);
 			ScreenPrint(Enemy_list[i].x, Enemy_list[i].y + 1, "┌ ㄴ");
 		}
+		else if (Enemy_list[i].State == DEAD)
+		{
+			ScreenPrint(Enemy_list[i].x, Enemy_list[i].y, "O T L");
+		}
 	}
 
 	for (int i = 0; i < BombEnemyIndex; ++i)
 	{
 		if (BombEnemy_list[i].State == RUN)
 		{
-			ScreenPrint(BombEnemy_list[i].x, BombEnemy_list[i].y, "＼B/ ");
+			sprintf_s(strBombEnemy, "＼B/ %d", BombEnemy_list[i].Life);
+			ScreenPrint(BombEnemy_list[i].x, BombEnemy_list[i].y, strBombEnemy);
 			ScreenPrint(BombEnemy_list[i].x, BombEnemy_list[i].y + 1, " ┌ ㄴ=3");
 		}
 		else if (BombEnemy_list[i].State == DEAD)
@@ -447,17 +538,42 @@ void TurretInstallUI()
 	ScreenPrint(20, 28, strTurret);
 }
 
+void TurretUpgradeUI()
+{
+	char strTurret[50];
+	sprintf_s(strTurret, "업그레이드 할 터렛 위치를 선택해주세요 : %d", TurretUpgradeSelect);
+	ScreenPrint(20, 28, strTurret);
+}
+
+
+void UpgradeRenderUI()
+{
+	char strUpgrade[100];
+	if (UpgradeSelect == 0)
+	{
+		sprintf_s(strUpgrade, "[1.플레이어 위력 : 100] 2.터렛 위력 3.터렛 발사 시간");
+	}
+	if (UpgradeSelect == 1)
+	{
+		sprintf_s(strUpgrade, "1.플레이어 위력 [2.터렛 위력 : 200] 3.터렛 발사 시간");
+	}
+	if (UpgradeSelect == 2)
+	{
+		sprintf_s(strUpgrade, "1.플레이어 위력 2.터렛 위력 [3.터렛 발사 시간 : 200]");
+	}
+	ScreenPrint(20, 28, strUpgrade);
+}
 void RenderRepairUI()
 {
-	if (!TurretUI && !UpgradeUI)
+	if (!TurretUI && !UpgradeUI && !IsTurretUpGradeUI)
 	{
 		if (MenuSelect == 0)
 		{
-			ScreenPrint(20, 28, "[1.벽 수리] 2.터렛 설치 3.업그레이드 4.디펜스 시작");
+			ScreenPrint(20, 28, "[1.벽 수리 : 100] 2.터렛 설치 3.업그레이드 4.디펜스 시작");
 		}
 		else if (MenuSelect == 1)
 		{
-			ScreenPrint(20, 28, "1.벽 수리 [2.터렛 설치] 3.업그레이드 4.디펜스 시작");
+			ScreenPrint(20, 28, "1.벽 수리 [2.터렛 설치 : 200] 3.업그레이드 4.디펜스 시작");
 		}
 		else if (MenuSelect == 2)
 		{
@@ -471,6 +587,14 @@ void RenderRepairUI()
 	else if (TurretUI)
 	{
 		TurretInstallUI();
+	}
+	else if (UpgradeUI)
+	{
+		UpgradeRenderUI();
+	}
+	else if (IsTurretUpGradeUI)
+	{
+		TurretUpgradeUI();
 	}
 }
 void Render()
@@ -511,6 +635,11 @@ void Render()
 	ScreenFlipping();
 }
 
+void EndRender()
+{
+
+}
+
 void DeadErase()
 {
 	for (int i = 0; i < EnemyIndex; ++i)
@@ -539,14 +668,21 @@ void Release()
 	EnemyIndex = 0;
 	lastofEnemy = -1;
 	Enemyarrsize = 1;
+
 	free(BombEnemy_list);
 	BombEnemyIndex = 0;
 	lastofBombEnemy = -1;
 	BombEnemyarrsize = 1;
+
 	free(PlayerBullet);
 	Bulletarrsize = 1;
 	BulletSize = 0;
 	lastofBullet = -1;
+
+	free(ShootEnemy_list);
+	ShootEnemyIndex = 0;
+	lastofShootEnemy = -1;
+	ShootEnemyarrsize = 1;
 
 }
 void GamePhase()
@@ -585,6 +721,9 @@ void ExcuteMenu(int select)
 	case 1:
 		TurretUI = true;
 		break;
+	case 2:
+		UpgradeUI = true;
+		break;
 	case 3:
 		phase = GAME;
 		break;
@@ -605,15 +744,47 @@ void RepairMenuMover()
 		case 77:
 			if (TurretUI)
 			{
-				TurretSelect++;
-				if (TurretSelect > 9)
-				{
+				if (++TurretSelect > 9)
 					TurretSelect = 0;
+				if (Turret_arr[TurretSelect].Status == 1)
+				{
+					for (int i = TurretSelect+1; i < 10; ++i)
+					{
+						if (Turret_arr[i].Status == 0)
+						{
+							TurretSelect = i;
+							break;
+						}
+						if (i == 9)
+							i = 0;
+					}
 				}
 			}
 			else if (UpgradeUI)
 			{
-
+				UpgradeSelect++;
+				if (UpgradeSelect > 2)
+				{
+					UpgradeSelect = 0;
+				}
+			}
+			else if (IsTurretUpGradeUI)
+			{
+				if (++TurretUpgradeSelect > 9)
+					TurretUpgradeSelect = 0;
+				if (Turret_arr[TurretUpgradeSelect].Status != 1)
+				{
+					for (int i = TurretUpgradeSelect+1; i < 10; ++i)
+					{
+						if (Turret_arr[i].Status == 1)
+						{
+							TurretUpgradeSelect = i;
+							break;
+						}
+						if (i == 9)
+							i = -1;
+					}
+				}
 			}
 			else
 			{
@@ -626,15 +797,47 @@ void RepairMenuMover()
 		case 75:
 			if (TurretUI)
 			{
-				TurretSelect--;
-				if (TurretSelect < 0)
-				{
+				if (--TurretSelect < 0)
 					TurretSelect = 9;
+				if (Turret_arr[TurretSelect].Status == 1)
+				{
+					for (int i = TurretSelect; i >=0 ; --i)
+					{
+						if (Turret_arr[i].Status == 0)
+						{
+							TurretSelect = i;
+							break;
+						}
+						if (i == 0)
+							i = 10;
+					}
 				}
 			}
 			else if (UpgradeUI)
 			{
-
+				UpgradeSelect--;
+				if (UpgradeSelect < 0)
+				{
+					UpgradeSelect = 2;
+				}
+			}
+			else if (IsTurretUpGradeUI)
+			{
+				if (--TurretUpgradeSelect < 0)
+					TurretUpgradeSelect = 9;
+				if (Turret_arr[TurretUpgradeSelect].Status != 1)
+				{
+					for (int i = TurretUpgradeSelect; i >= 0; --i)
+					{
+						if (Turret_arr[i].Status == 1)
+						{
+							TurretUpgradeSelect = i;
+							break;
+						}
+						if (i == 0)
+							i = 10;
+					}
+				}
 			}
 			else
 			{
@@ -648,20 +851,51 @@ void RepairMenuMover()
 			{
 				TurretInstall(TurretSelect);
 				TurretUI = false;
+				for (int i = 0; i < 10; ++i)
+				{
+					if (Turret_arr[i].Status == 0)
+					{
+						TurretSelect = FirstTurretSelect = i;
+						break;
+					}
+				}
+				for (int i = 0; i < 10; ++i)
+				{
+					if (Turret_arr[i].Status == 1)
+					{
+						TurretUpgradeSelect = FirstTurretUpgradeSelect = i;
+						break;
+					}
+				}
 				break;
 			}
-			else
+			else if (UpgradeUI)
 			{
-
+				Upgrade(UpgradeSelect);
+				UpgradeUI = false;
+				break;
 			}
-			ExcuteMenu(MenuSelect);
+			else if (IsTurretUpGradeUI)
+			{
+				//UpgradeTurret(UpgradeSelect);
+				IsTurretUpGradeUI = false;
+				break;
+			}
+			else 
+			{
+				ExcuteMenu(MenuSelect);
+				break;
+			}
+		case 27:
+			TurretUI = false;
+			UpgradeUI = false;
+			IsTurretUpGradeUI = false;
 			break;
 		}
 	}
 }
 void RepairPhase()
 {
-	int n;
 	while (phase == REPAIR)
 	{
 		Render();
@@ -671,14 +905,14 @@ void RepairPhase()
 
 void EndPhase()
 {
-
+	EndRender();
 }
-
 int main(void)
 {
 	srand(unsigned int(time(NULL)));
 	ScreenInit();
 	Init();
+	player.GunPower = 1;
 	int j = 0;
 	for (int i = 0; i < 10; i++,j+=2)
 	{
@@ -686,6 +920,7 @@ int main(void)
 		Turret_arr[i].y = 6+j;
 		Turret_arr[i].Status = 0;
 		Turret_arr[i].FireTime = 5000;
+		Turret_arr[i].TurretPower = 1;
 	}
 	while (1)
 	{
@@ -706,8 +941,6 @@ int main(void)
 		}
  	}
 	ScreenRelease();
-	free(PlayerBullet);
-	free(Enemy_list);
-	free(BombEnemy_list);
+	Release();
 	return 0;
 }
