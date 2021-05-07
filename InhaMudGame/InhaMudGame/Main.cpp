@@ -8,6 +8,7 @@
 #define ENEMY_SPAWNTIME 5000
 #define BOMBENEMY_SPAWNTIME 9000
 #define SHOOTENEMY_SPAWNTIME 18400
+#define RELOAD_TIME 1000
 
 void Bullet_Full()
 {
@@ -36,6 +37,7 @@ void EnemyBullet_Full()
 	EnemyBullet = (ENEMY_BULLET*)realloc(EnemyBullet, 2 * (EnemyBulletarrsize) * sizeof(ENEMY_BULLET));
 	EnemyBulletarrsize *= 2;
 }
+
 void EnemyBullet_push_back(ENEMY_BULLET item)
 {
 	if (lastofEnemyBullet >= EnemyBulletarrsize - 1)
@@ -43,6 +45,7 @@ void EnemyBullet_push_back(ENEMY_BULLET item)
 	EnemyBullet[++lastofEnemyBullet] = item;
 	++EnemyBulletSize;
 }
+
 void EnemyBullet_Delete(int index)
 {
 	for (int i = index; i < EnemyBulletSize; ++i)
@@ -53,12 +56,12 @@ void EnemyBullet_Delete(int index)
 	--lastofEnemyBullet;
 }
 
-
 void Enemy_Full()
 {
 	Enemy_list = (ENEMY*)realloc(Enemy_list, 2 * (Enemyarrsize) * sizeof(ENEMY));
 	Enemyarrsize *= 2;
 }
+
 void Enemy_push_back(ENEMY item)
 {
 	if (lastofEnemy >= Enemyarrsize - 1)
@@ -66,6 +69,7 @@ void Enemy_push_back(ENEMY item)
 	Enemy_list[++lastofEnemy] = item;
 	++EnemyIndex;
 }
+
 void Enemy_Delete(int index)
 {
 	for (int i = index; i < EnemyIndex; ++i)
@@ -76,12 +80,12 @@ void Enemy_Delete(int index)
 	--lastofEnemy;
 }
 
-
 void BombEnemy_Full()
 {
 	BombEnemy_list = (BOMB_ENEMY*)realloc(BombEnemy_list, 2 * (BombEnemyarrsize) * sizeof(BOMB_ENEMY));
 	BombEnemyarrsize *= 2;
 }
+
 void BombEnemy_push_back(BOMB_ENEMY item)
 {
 	if (lastofBombEnemy >= BombEnemyarrsize - 1)
@@ -89,6 +93,7 @@ void BombEnemy_push_back(BOMB_ENEMY item)
 	BombEnemy_list[++lastofBombEnemy] = item;
 	++BombEnemyIndex;
 }
+
 void BombEnemy_Delete(int index)
 {
 	for (int i = index; i < BombEnemyIndex; ++i)
@@ -104,6 +109,7 @@ void ShootEnemy_Full()
 	ShootEnemy_list = (SHOOT_ENEMY*)realloc(ShootEnemy_list, 2 * (ShootEnemyarrsize) * sizeof(SHOOT_ENEMY));
 	ShootEnemyarrsize *= 2;
 }
+
 void ShootEnemy_push_back(SHOOT_ENEMY item)
 {
 	if (lastofShootEnemy >= ShootEnemyarrsize - 1)
@@ -111,6 +117,7 @@ void ShootEnemy_push_back(SHOOT_ENEMY item)
 	ShootEnemy_list[++lastofShootEnemy] = item;
 	++ShootEnemyIndex;
 }
+
 void ShootEnemy_Delete(int index)
 {
 	for (int i = index; i < ShootEnemyIndex; ++i)
@@ -138,7 +145,6 @@ void TurretInstall(int index)
 
 void TurretShoot(int passtime)
 {
-	//clock_t curtime = clock();
 	for (int i = 0; i < 10; ++i)
 	{
 		if (Turret_arr[i].Status != 1) continue;
@@ -158,16 +164,35 @@ void TurretShoot(int passtime)
 
 void UpgradeTurret(int n,int index)
 {
-	IsTurretUpGradeUI = true;
-	if (n == 1)
+	if (n == 2)
 	{
-		Turret_arr[index].TurretPower += 1;
+		if (Score >= Turret_arr[index].TGPrice)
+		{
+			Turret_arr[index].TurretPower += 1;
+			Score -= Turret_arr[index].TGPrice;
+			Turret_arr[index].TGPrice*=1.5;
+		}
+		else
+		{
+			IsScoreLessUI = true;
+		}
 	}
-	else if (n == 2)
+	else if (n == 3)
 	{
-		Turret_arr[index].FireTime -= 500;
+		if (Score >= Turret_arr[index].TSPrice)
+		{
+			Turret_arr[index].FireTime -= 500;
+			Turret_arr[index].TurretSpeed += 1;
+			Score -= Turret_arr[index].TSPrice;
+			Turret_arr[index].TSPrice*=1.5;
+		}
+		else
+		{
+			IsScoreLessUI = true;
+		}
 	}
 }
+
 void Upgrade(int index)
 {
 	switch (index)
@@ -185,10 +210,22 @@ void Upgrade(int index)
 		}
 		break;
 	case 1:
-		UpgradeTurret(index,TurretUpgradeSelect);
+		if (Score >= PMPrice)
+		{
+			player.Magazine++;
+			Score -= PMPrice;
+			PMPrice *= 1.5;
+		}
+		else
+		{
+			IsScoreLessUI = true;
+		}
 		break;
 	case 2:
-		UpgradeTurret(index,TurretUpgradeSelect);
+		IsTurretUpGradeUI = true;
+		break;
+	case 3:
+		IsTurretUpGradeUI = true;
 		break;
 	}
 }
@@ -230,7 +267,7 @@ void PlayerMove()
 			}
 			break;
 		case 32:
-			if (curtime - player.OldFireTime >= player.FireTime)
+			if (!IsReload)
 			{
 				BULLET temp;
 				temp.Direct = RIGHT;
@@ -240,6 +277,13 @@ void PlayerMove()
 				player.OldFireTime = temp.MoveTime = curtime;
 				temp.Power = player.GunPower;
 				Bullet_push_back(temp);
+				player.FireCount++;
+				if (player.FireCount == player.Magazine)
+				{
+					IsReload = true;
+					player.FireCount = 0;
+					ReloadStartTime = curtime;
+				}
 			}
 			break;
 		case 51:
@@ -260,35 +304,34 @@ void EnemySpawn(int passtime)
 		temp.ApperTime = passtime;
 		temp.Direct = LEFT;
 		temp.MoveTime = 300;
-		temp.x = MAP_COL - 4;
-		temp.y = (rand()) % 19 + 5;
+		temp.x = MAP_COL - 5;
+		temp.y = (rand()) % 19 + 6;
 		temp.Life = 3+(Round-1);
 		temp.State = RUN;
 		Enemy_push_back(temp);
 		EnemySpawnTime = passtime;
 	}
-
 	
-	if (BombEnemySpawnTime + (BOMBENEMY_SPAWNTIME - ((Round-1)*100)) <= passtime && Round>1)
+	if (BombEnemySpawnTime + (BOMBENEMY_SPAWNTIME - ((Round-2)*100)) <= passtime && Round>2)
 	{
 		BOMB_ENEMY temp;
 		temp.AppearTime = passtime;
 		temp.MoveTime = 20;
-		temp.x = MAP_COL - 6;
-		temp.y = (rand()) % 19 + 5;
-		temp.Life = 1+(Round-1);
+		temp.x = MAP_COL - 7;
+		temp.y = (rand()) % 18 + 6;
+		temp.Life = 1+(Round-2);
 		temp.State = RUN;
 		BombEnemy_push_back(temp);
 		BombEnemySpawnTime = passtime;
 	}
 
-	if (ShootEnemySpawnTime + (SHOOTENEMY_SPAWNTIME - ((Round-3)*100)) <= passtime && Round>3)
+	if (ShootEnemySpawnTime + (SHOOTENEMY_SPAWNTIME - ((Round-4)*100)) <= passtime && Round>5)
 	{
 		SHOOT_ENEMY temp;
 		temp.AppearTime = passtime;
 		temp.MoveTime = 900;
 		temp.x = MAP_COL - 4;
-		temp.y = (rand()) % 19 + 5;
+		temp.y = (rand()) % 18 + 6;
 		temp.Life = 1;
 		temp.FireTime = 8000 - ((Round-3)*100);
 		temp.GunPower = 1 + (Round - 3);
@@ -437,7 +480,10 @@ void Update()
 {
 	int curtime = clock();
 	int passtime=curtime;
-
+	if (IsReload && ReloadStartTime + RELOAD_TIME <= curtime)
+	{
+		IsReload = false;
+	}
 	EnemySpawn(passtime);
 	EnemyMove(curtime);
 	EnemyShoot(passtime);
@@ -503,6 +549,18 @@ void RenderBasicUI()
 	ScreenPrint(50, 3, Time);
 	ScreenPrint(90, 1, strGunPower);
 	ScreenPrint(90, 3, strRound);
+	if (IsReload)
+	{
+		ScreenPrint(70, 4, "재장전....");
+	}
+	else
+	{
+		ScreenPrint(64,4,"탄창 : ");
+		for (int i = 0; i < player.Magazine - player.FireCount; ++i)
+		{
+			ScreenPrint(70 + i, 4, "●");
+		}
+	}
 }
 
 void RenderGameUI()
@@ -583,8 +641,15 @@ void TurretInstallUI()
 
 void TurretUpgradeUI()
 {
-	char strTurret[50];
-	sprintf_s(strTurret, "업그레이드 할 터렛 위치를 선택해주세요 : %d", TurretUpgradeSelect);
+	char strTurret[100];
+	if (UpgradeSelect == 2)
+	{
+		sprintf_s(strTurret, "업그레이드 할 터렛 위치를 선택해주세요 : %d  Power : %d 가격 : %d", TurretUpgradeSelect, Turret_arr[TurretUpgradeSelect].TurretPower, Turret_arr[TurretUpgradeSelect].TGPrice);
+	}
+	else
+	{
+		sprintf_s(strTurret, "업그레이드 할 터렛 위치를 선택해주세요 : %d Speed : %d 가격 :  %d", TurretUpgradeSelect, Turret_arr[TurretUpgradeSelect].TurretSpeed, Turret_arr[TurretUpgradeSelect].TSPrice);
+	}
 	ScreenPrint(20, 28, strTurret);
 }
 
@@ -593,15 +658,19 @@ void UpgradeRenderUI()
 	char strUpgrade[100];
 	if (UpgradeSelect == 0)
 	{
-		sprintf_s(strUpgrade, "[1.플레이어 위력 : %d] 2.터렛 위력 3.터렛 발사 시간",PGPrice);
+		sprintf_s(strUpgrade, "[1.플레이어 위력 : %d] 2.플레이어 탄창 3.터렛 위력 4.터렛 발사 시간",PGPrice);
 	}
 	if (UpgradeSelect == 1)
 	{
-		sprintf_s(strUpgrade, "1.플레이어 위력 [2.터렛 위력 : %d] 3.터렛 발사 시간",TGPrice);
+		sprintf_s(strUpgrade, "1.플레이어 위력 [2.플레이어 탄창 : %d] 3.터렛 위력 4.터렛 발사 시간", PGPrice);
 	}
 	if (UpgradeSelect == 2)
 	{
-		sprintf_s(strUpgrade, "1.플레이어 위력 2.터렛 위력 [3.터렛 발사 시간 : %d]",TSPirce);
+		sprintf_s(strUpgrade, "1.플레이어 위력 2.플레이어 탄창 [3.터렛 위력] 4.터렛 발사 시간");
+	}
+	if (UpgradeSelect == 3)
+	{
+		sprintf_s(strUpgrade, "1.플레이어 위력 2.플레이어 탄창 3.터렛 위력 [4.터렛 발사 시간]");
 	}
 	ScreenPrint(20, 28, strUpgrade);
 }
@@ -656,7 +725,7 @@ void Render()
 	}
 	for (int i = 0; i < MAP_COL; ++i)
 	{
-		ScreenPrint(i, 25, "=");
+		ScreenPrint(i, 26, "=");
 	}
 	if (phase == GAME)
 	{
@@ -666,7 +735,7 @@ void Render()
 	{
 		RenderRepairUI();
 	}
-	for (int i = 6; i < 25; ++i)
+	for (int i = 6; i < 26; ++i)
 	{
 		ScreenPrint(4, i, "| |");
 	}
@@ -676,7 +745,8 @@ void Render()
 		{
 			if (Turret_arr[j].Status == 1)
 			{
-				ScreenPrint(Turret_arr[j].x, Turret_arr[j].y, ">");
+				ScreenPrint(Turret_arr[j].x, Turret_arr[j].y, " ■-");
+				ScreenPrint(Turret_arr[j].x, Turret_arr[j].y+1, "┎│┐");
 			}
 		}
 	}
@@ -688,7 +758,6 @@ void EndRender()
 	ScreenClear();
 	ScreenPrint(25, 25, "GAME OVER");
 	ScreenFlipping();
-
 }
 
 void DeadErase()
@@ -754,7 +823,7 @@ void GamePhase()
 			phase = END;
 			break;
 		}
-		if (RoundTime < 1)
+		if (RoundTime < 0)
 		{
 			phase = REPAIR;
 			break;
@@ -824,7 +893,7 @@ void RepairMenuMover()
 			else if (UpgradeUI)
 			{
 				UpgradeSelect++;
-				if (UpgradeSelect > 2)
+				if (UpgradeSelect > 3)
 				{
 					UpgradeSelect = 0;
 				}
@@ -879,7 +948,7 @@ void RepairMenuMover()
 				UpgradeSelect--;
 				if (UpgradeSelect < 0)
 				{
-					UpgradeSelect = 2;
+					UpgradeSelect = 3;
 				}
 			}
 			else if (IsTurretUpGradeUI)
@@ -938,7 +1007,7 @@ void RepairMenuMover()
 			}
 			else if (IsTurretUpGradeUI)
 			{
-				//UpgradeTurret(UpgradeSelect);
+				UpgradeTurret(UpgradeSelect, TurretUpgradeSelect);
 				IsTurretUpGradeUI = false;
 				break;
 			}
@@ -984,18 +1053,19 @@ void EndPhase()
 void TitleRender()
 {
 	ScreenClear();
-	ScreenPrint(12, 5, "#####  ####    ###   #   #  #####         #      #####  #   #  ##### ");
-	ScreenPrint(12, 6, "#      #   #  #   #  ##  #    #           #        #    ##  #  #     ");
-	ScreenPrint(12, 7, "#      #   #  #   #  ##  #    #           #        #    ##  #  #     ");
-	ScreenPrint(12, 8, "####   ####   #   #  # # #    #           #        #    # # #  ####  ");
-	ScreenPrint(12, 9, "#      # #    #   #  #  ##    #           #        #    #  ##  #     ");
-	ScreenPrint(12, 10,"#      #  #   #   #  #  ##    #           #        #    #  ##  #     ");
-	ScreenPrint(12, 11, "#      #   #   ###   #   #    #           #####  #####  #   #  ##### ");
+	ScreenPrint(20, 4, "□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□");
+	ScreenPrint(20, 5, "□#####  ####    ###   #   #  #####         #      #####  #   #  #####□");
+	ScreenPrint(20, 6, "□#      #   #  #   #  ##  #    #           #        #    ##  #  #    □");
+	ScreenPrint(20, 7, "□#      #   #  #   #  ##  #    #           #        #    ##  #  #    □");
+	ScreenPrint(20, 8, "□####   ####   #   #  # # #    #           #        #    # # #  #### □");
+	ScreenPrint(20, 9, "□#      # #    #   #  #  ##    #           #        #    #  ##  #    □");
+	ScreenPrint(20, 10,"□#      #  #   #   #  #  ##    #           #        #    #  ##  #    □");
+	ScreenPrint(20, 11,"□#      #   #   ###   #   #    #           #####  #####  #   #  #####□");
+	ScreenPrint(20, 12, "□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□");
 
-	ScreenPrint(30, 15, "Press 'space' to Start");
+	ScreenPrint(40, 15, "Press 'space' to Start");
 	ScreenFlipping();
 }
-
 
 void TitlePhase()
 {
@@ -1017,16 +1087,19 @@ int main(void)
 {
 	srand(unsigned int(time(NULL)));
 	ScreenInit();
-	Init();
 	player.GunPower = 1;
+	player.Magazine = 5;
 	int j = 0;
 	for (int i = 0; i < 10; i++,j+=2)
 	{
 		Turret_arr[i].x = 5;
 		Turret_arr[i].y = 6+j;
 		Turret_arr[i].Status = 0;
-		Turret_arr[i].FireTime = 5000;
+		Turret_arr[i].FireTime = 4000;
 		Turret_arr[i].TurretPower = 1;
+		Turret_arr[i].TurretSpeed = 1;
+		Turret_arr[i].TGPrice = 100;
+		Turret_arr[i].TSPrice = 100;
 	}
 	while (1)
 	{
@@ -1038,12 +1111,13 @@ int main(void)
 		}
 		if (phase == GAME)
 		{
+			Init();
 			GamePhase();
+			Release();
 		}
 		if (phase == REPAIR)
 		{
-			Release();
-			Init();
+			MenuSelect = 0;
 			RepairPhase();
 		}
 		if (phase == END)

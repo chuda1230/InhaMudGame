@@ -1,0 +1,11 @@
+﻿  Screen.cpp
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\screen.cpp(43): warning C4838: conversion from 'int' to 'SHORT' requires a narrowing conversion
+  Main.cpp
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(173): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(187): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(205): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(217): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+  Generating code
+  All 56 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  InhaMudGame.vcxproj -> E:\문서\GitHub\InhaMudGame\InhaMudGame\Release\InhaMudGame.exe

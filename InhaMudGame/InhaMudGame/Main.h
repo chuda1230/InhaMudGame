@@ -8,6 +8,8 @@ typedef enum _PHASE { TITLE,GAME, REPAIR, END } PHASE;	//게임의 페이즈
 PHASE phase;			//게임의 단계
 unsigned int StartTime;	//시작시간
 int Score;				//점수
+bool IsReload;			//재장전 여부
+clock_t ReloadStartTime;	//재장전 시작시간
 
 //UI관련
 bool TurretUI;
@@ -22,10 +24,9 @@ int FirstTurretSelect = 0;
 int FirstTurretUpgradeSelect = 0;
 
 int PGPrice = 50;
+int PMPrice = 50;
 int TurPrice = 100;
-int TGPrice = 150;
-int TSPirce = 150;
-
+int TUPrice;
 //플레이어
 typedef struct _Player	
 {
@@ -34,6 +35,8 @@ typedef struct _Player
 	int OldFireTime;	//전발사 시간
 	DIRECT direct;		
 	int GunPower;		//총기위력
+	int Magazine;		//장탄 수
+	int FireCount;		//발사횟수
 } Player;
 Player player;
 
@@ -128,6 +131,8 @@ typedef struct _TURRET
 	int Status;			//상태
 	int TurretPower;	//터렛위력업그레이드
 	int TurretSpeed;	//터렛스피드업그레이드
+	int TGPrice;
+	int TSPrice;
 
 } TURRET;
 TURRET Turret_arr[10];	//터렛 배열
