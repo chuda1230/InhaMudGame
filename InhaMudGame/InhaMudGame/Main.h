@@ -16,6 +16,7 @@ bool TurretUI;
 bool UpgradeUI;
 bool IsTurretUpGradeUI;
 bool IsScoreLessUI;
+bool TurretActive;
 int MenuSelect = 0;
 int TurretSelect = 0;
 int UpgradeSelect = 0;

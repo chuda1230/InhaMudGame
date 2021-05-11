@@ -1,6 +1,6 @@
 ﻿  Main.cpp
-e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(173): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
-e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(187): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
-e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(205): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
-e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(217): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(177): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(191): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(209): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
+e:\문서\github\inhamudgame\inhamudgame\inhamudgame\main.cpp(221): warning C4244: '*=': conversion from 'double' to 'int', possible loss of data
   InhaMudGame.vcxproj -> E:\문서\GitHub\InhaMudGame\InhaMudGame\Debug\InhaMudGame.exe

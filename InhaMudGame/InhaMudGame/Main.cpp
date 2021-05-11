@@ -132,6 +132,10 @@ void ShootEnemy_Delete(int index)
 
 void TurretInstall(int index)
 {
+	if (!TurretActive)
+	{
+		TurretActive = true;
+	}
 	if (Turret_arr[index].Status != 1 && Score >= TurPrice)
 	{
 		Score -= TurPrice;
@@ -234,6 +238,7 @@ void Init()
 {
 	player.x = 1;
 	player.y = 10;
+	player.FireCount = 0;
 	PlayerBullet = (BULLET*)malloc(sizeof(BULLET));
 	EnemyBullet = (ENEMY_BULLET*)malloc(sizeof(ENEMY_BULLET));
 	Enemy_list = (ENEMY*)malloc(sizeof(ENEMY));
@@ -304,7 +309,7 @@ void EnemySpawn(int passtime)
 		temp.ApperTime = passtime;
 		temp.Direct = LEFT;
 		temp.MoveTime = 300;
-		temp.x = MAP_COL - 5;
+		temp.x = MAP_COL - 6;
 		temp.y = (rand()) % 19 + 6;
 		temp.Life = 3+(Round-1);
 		temp.State = RUN;
@@ -767,7 +772,7 @@ void DeadErase()
 		if (Enemy_list[i].State == DEAD)
 		{
 			Enemy_Delete(i);
-			Score += 10;
+			Score += 50;
 		}
 		else if (Enemy_list[i].State == HIT)
 			Enemy_list[i].State = RUN;
@@ -778,6 +783,14 @@ void DeadErase()
 		{
 			BombEnemy_Delete(i);
 			Score += 20;
+		}
+	}
+	for (int i = 0; i < ShootEnemyIndex; ++i)
+	{
+		if (ShootEnemy_list[i].State == DEAD)
+		{
+			ShootEnemy_Delete(i);
+			Score += 40;
 		}
 	}
 }
